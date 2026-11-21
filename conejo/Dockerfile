@@ -1,4 +1,4 @@
-FROM data.forgejo.org/forgejo/forgejo:15.0.12-rootless
+FROM data.forgejo.org/forgejo/forgejo:17.0.2-rootless
 
 USER root
 RUN apk add --no-cache sqlite
