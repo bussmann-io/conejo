@@ -159,7 +159,7 @@ ensure_admin() {
 
 register_runner() {
   [ -n "${CONEJO_RUNNER_SECRET:-}" ] || return 0
-  local output args=(--secret-file "$TEMP/runner-secret")
+  local output args=(--secret-file "$TEMP/runner-secret" --keep-labels)
   [ -z "${CONEJO_RUNNER_NAME:-}" ] || args+=(--name "$CONEJO_RUNNER_NAME")
   printf '%s' "$CONEJO_RUNNER_SECRET" >"$TEMP/runner-secret"
   if output=$("$FORGEJO" forgejo-cli actions register "${args[@]}" 2>&1); then

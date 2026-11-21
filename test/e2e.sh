@@ -103,9 +103,9 @@ on_volume() {
 
 repository_exists() { api "$1" "http://127.0.0.1:3000/api/v1/repos/tester/$2" >/dev/null; }
 
-job_succeeded() {
+jobs_succeeded() {
   api "$forgejo" http://127.0.0.1:3000/api/v1/repos/tester/probe/actions/tasks |
-    jq -e '.workflow_runs | length > 0 and all(.status == "success")' >/dev/null
+    jq -e --argjson count "$1" '.workflow_runs | length >= $count and all(.status == "success")' >/dev/null
 }
 
 step "start an S3 server"
@@ -139,16 +139,23 @@ workflow=$(printf '%s\n' 'on: push' 'jobs:' '  e2e:' '    runs-on: e2e' '    ste
 api "$forgejo" -X POST -d "{\"content\":\"$workflow\",\"message\":\"add workflow\"}" \
   http://127.0.0.1:3000/api/v1/repos/tester/probe/contents/.forgejo/workflows/e2e.yml >/dev/null ||
   fail "adding the workflow failed"
-wait_until 180 "the job to succeed" job_succeeded
+wait_until 180 "the job to succeed" jobs_succeeded 1
 
 step "keep an existing admin and back up to S3"
-start_forgejo "$forgejo" "$run-data" "${backup_env[@]}" -e CONEJO_ADMIN_USERNAME=tester -e "CONEJO_ADMIN_PASSWORD=$password"
+start_forgejo "$forgejo" "$run-data" "${backup_env[@]}" -e CONEJO_ADMIN_USERNAME=tester -e "CONEJO_ADMIN_PASSWORD=$password" \
+  -e "CONEJO_RUNNER_SECRET=$runner_secret"
 wait_until 180 "the first backup" logs_contain "$forgejo" "backup: uploaded monthly/"
 logs_contain "$forgejo" "admin: set the password of tester" || fail "the existing admin was not found"
 for slot in hourly daily monthly; do
   logs_contain "$forgejo" "backup: uploaded $slot/forgejo-" || fail "no $slot backup was uploaded"
 done
 backup=$(docker logs "$forgejo" 2>&1 | grep -o 'hourly/forgejo-[0-9]*\.tar\.gz\.gpg' | tail -n 1)
+
+step "run a job on the same runner after Forgejo restarted"
+api "$forgejo" -X POST -d "{\"content\":\"$(printf 'restarted\n' | base64)\",\"message\":\"run the workflow again\"}" \
+  http://127.0.0.1:3000/api/v1/repos/tester/probe/contents/restarted.txt >/dev/null ||
+  fail "adding a file failed"
+wait_until 180 "the second job to succeed" jobs_succeeded 2
 
 step "restore $backup into an empty volume"
 start_forgejo "$run-restored" "$run-restored" "${backup_env[@]}" -e "CONEJO_RESTORE_FROM=$backup" \
