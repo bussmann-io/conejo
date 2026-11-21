@@ -65,7 +65,7 @@ jobs:
         id: upstream
         env:
           IMAGE: ${{ matrix.image }}
-        run: echo "version=$(sed -nE 's/^FROM [^:]+:([0-9][0-9.]*).*/\1/p' "$IMAGE/Dockerfile")" >>"$GITHUB_OUTPUT"
+        run: echo "version=$(sed -nE '0,/^FROM /s/^FROM [^:]+:([0-9][0-9.]*).*/\1/p' "$IMAGE/Dockerfile")" >>"$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v4.4.1
 

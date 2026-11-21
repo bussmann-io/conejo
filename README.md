@@ -3,7 +3,7 @@
 Forgejo and a Forgejo Actions runner for [bunny.net Magic Containers](https://bunny.net/magic-containers/), with hourly encrypted backups to S3.
 
 - `ghcr.io/bussmann-io/conejo` is the official rootless Forgejo 15 LTS image plus a start script.
-- `ghcr.io/bussmann-io/conejo-runner` is the official Forgejo runner image plus Node.js, npm, curl, jq and ssh for jobs.
+- `ghcr.io/bussmann-io/conejo-runner` is the official Forgejo runner on Ubuntu 24.04. Jobs get Node.js 24, npm, git, curl, jq, ssh, sudo, zip and xz.
 
 Magic Containers keeps a volume on a single node, without snapshots, and has no shell into a running container. conejo handles that from environment variables:
 
@@ -159,7 +159,8 @@ The image sets these defaults for Magic Containers:
 Jobs run directly in the runner container, because Magic Containers has no Docker:
 
 - `container:`, `services:` and Docker-based actions don't run.
-- `actions/setup-node` downloads builds that don't run on Alpine. Use the installed Node.js 24.
+- With `ubuntu-latest` in `CONEJO_RUNNER_LABELS`, workflows written for GitHub run unchanged.
+- GitHub's runners come with far more tools. A job installs what it misses with a setup action or `sudo apt-get install`.
 - All repositories share the runner and its container. Only let trusted people change workflows.
 
 ## Backups
@@ -237,8 +238,9 @@ gpg --decrypt forgejo-07.tar.gz.gpg | tar -xz
 ## Upgrades
 
 - Images are tagged with the upstream version: `conejo:15.0.12` and `conejo-runner:13.2.2`. `latest` and `sha-<commit>` exist too.
-- CI rebuilds both images every week, so Alpine security updates arrive without a new Forgejo release.
+- CI rebuilds both images every week, so security updates of their base systems arrive without a new Forgejo release.
 - To upgrade, change the tag in `bunny.jsonc` and run `bunny apps deploy`.
+- A restart keeps the image Bunny pulled before. Run `bunny apps deploy` to get a weekly rebuild.
 - Forgejo can't open a database that a newer version has migrated. Going back only works before the new version became healthy, because then conejo puts its copy back.
 
 ## Limits

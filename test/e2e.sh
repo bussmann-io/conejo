@@ -135,7 +135,8 @@ step "run a job on the runner"
 docker run -d --name "$run-runner" --network "$run" -e "CONEJO_FORGEJO_URL=http://$forgejo:3000/" \
   -e "CONEJO_RUNNER_SECRET=$runner_secret" -e CONEJO_RUNNER_LABELS=e2e "$runner" >/dev/null
 workflow=$(printf '%s\n' 'on: push' 'jobs:' '  e2e:' '    runs-on: e2e' '    steps:' \
-  '      - run: node --version && npm --version && git --version && jq --version' | base64 | tr -d '\n')
+  '      - run: node --version && npm --version && git --version && jq --version && sudo -n true && getconf GNU_LIBC_VERSION && grep -qx ID=ubuntu /etc/os-release' |
+  base64 | tr -d '\n')
 api "$forgejo" -X POST -d "{\"content\":\"$workflow\",\"message\":\"add workflow\"}" \
   http://127.0.0.1:3000/api/v1/repos/tester/probe/contents/.forgejo/workflows/e2e.yml >/dev/null ||
   fail "adding the workflow failed"
